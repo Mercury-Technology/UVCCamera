@@ -153,7 +153,7 @@ class UvcCameraController extends ValueNotifier<UvcCameraControllerState> {
   }
 
   /// Takes a picture.
-  Future<XFile> takePicture() async {
+  Future<XFile> takePicture(bool? timestamp) async {
     _ensureInitializedNotDisposed();
 
     if (value.isTakingPicture) {
@@ -162,7 +162,10 @@ class UvcCameraController extends ValueNotifier<UvcCameraControllerState> {
 
     value = value.copyWith(isTakingPicture: true);
     try {
-      final XFile pictureFile = await UvcCameraPlatformInterface.instance.takePicture(_cameraId!);
+      final XFile pictureFile = await UvcCameraPlatformInterface.instance.takePicture(
+        _cameraId!,
+        timestamp ?? false,
+      );
       return pictureFile;
     } catch (e) {
       rethrow;
@@ -172,7 +175,7 @@ class UvcCameraController extends ValueNotifier<UvcCameraControllerState> {
   }
 
   /// Starts video recording.
-  Future<void> startVideoRecording(UvcCameraMode videoRecordingMode) async {
+  Future<void> startVideoRecording(UvcCameraMode videoRecordingMode, bool? timestamp) async {
     _ensureInitializedNotDisposed();
 
     if (value.isRecordingVideo) {
@@ -184,6 +187,7 @@ class UvcCameraController extends ValueNotifier<UvcCameraControllerState> {
       final XFile videoRecordingFile = await UvcCameraPlatformInterface.instance.startVideoRecording(
         _cameraId!,
         videoRecordingMode,
+        timestamp ?? false,
       );
       value = value.copyWith(videoRecordingFile: videoRecordingFile);
     } catch (e) {

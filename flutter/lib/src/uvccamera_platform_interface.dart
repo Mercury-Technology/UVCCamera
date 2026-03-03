@@ -83,11 +83,11 @@ abstract class UvcCameraPlatformInterface extends PlatformInterface {
     throw UnimplementedError('setPreviewMode() has not been implemented.');
   }
 
-  Future<XFile> takePicture(int cameraId) {
+  Future<XFile> takePicture(int cameraId, bool? timestamp) {
     throw UnimplementedError('takePicture() has not been implemented.');
   }
 
-  Future<XFile> startVideoRecording(int cameraId, UvcCameraMode videoRecordingMode) {
+  Future<XFile> startVideoRecording(int cameraId, UvcCameraMode videoRecordingMode, bool? timestamp) {
     throw UnimplementedError('startVideoRecording() has not been implemented.');
   }
 

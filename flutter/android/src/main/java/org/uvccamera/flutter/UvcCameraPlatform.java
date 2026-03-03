@@ -33,6 +33,11 @@ import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.view.TextureRegistry;
 
+import org.uvccamera.flutter.osd.GLRenderThread;
+import org.uvccamera.flutter.osd.FrameProcessor;
+import android.view.Surface;
+import android.graphics.SurfaceTexture;
+
 /**
  * UVC camera platform.
  */
@@ -120,6 +125,10 @@ import io.flutter.view.TextureRegistry;
      * @param binaryMessenger    the binary messenger
      * @param textureRegistry    the texture registry
      */
+
+    private GLRenderThread glThread = null;
+    private Surface glInputSurface = null;
+
     public UvcCameraPlatform(
             final @NonNull Context applicationContext,
             final @NonNull BinaryMessenger binaryMessenger,
@@ -949,7 +958,7 @@ import io.flutter.view.TextureRegistry;
      * @param cameraId      the camera ID
      * @param resultHandler the handler to be notified when the picture is taken
      */
-    public void takePicture(final int cameraId, UvcCameraTakePictureResultHandler resultHandler) {
+    public void takePicture(final int cameraId, boolean timestamp, UvcCameraTakePictureResultHandler resultHandler) {
         Log.v(TAG, "takePicture"
                 + ": cameraId=" + cameraId
         );
@@ -977,9 +986,10 @@ import io.flutter.view.TextureRegistry;
                         this,
                         cameraId,
                         outputFile,
-                        resultHandler
+                        resultHandler,
+                        timestamp
                 ),
-                UVCCamera.PIXEL_FORMAT_NV21
+                UVCCamera.PIXEL_FORMAT_YUV420SP
         );
     }
 
@@ -995,7 +1005,8 @@ import io.flutter.view.TextureRegistry;
             final int cameraId,
             final File outputFile,
             final ByteBuffer frame,
-            final UvcCameraTakePictureResultHandler resultHandler
+            final UvcCameraTakePictureResultHandler resultHandler,
+            final boolean timestamp
     ) {
         Log.v(TAG, "handleTakenPicture"
                 + ": cameraId=" + cameraId
@@ -1021,7 +1032,15 @@ import io.flutter.view.TextureRegistry;
             cameraResources.camera().setFrameCallback(null, 0);
 
             try {
-                saveTakenPictureToFile(cameraId, outputFile, frameData);
+                if (timestamp) {
+                    final var previewSize = cameraResources.camera().getPreviewSize();
+                    final FrameProcessor frameProcessor = new FrameProcessor(previewSize.width, previewSize.height);
+                    byte[] nv21WithDate = frameProcessor.addDateTimeToNV21(frameData);
+                    saveTakenPictureToFile(cameraId, outputFile, nv21WithDate);
+                } else {
+                    saveTakenPictureToFile(cameraId, outputFile, frameData);
+                }
+
                 resultHandler.onResult(outputFile, null);
             } catch(final Exception e) {
                 Log.e(TAG, "Failed to save taken picture to file", e);
@@ -1090,11 +1109,12 @@ import io.flutter.view.TextureRegistry;
      * @param frameHeight the frame height
      * @return the video recording file
      */
-    public File startVideoRecording(final int cameraId, final int frameWidth, final int frameHeight) {
+    public File startVideoRecording(final int cameraId, final int frameWidth, final int frameHeight, final boolean timestamp) {
         Log.v(TAG, "startVideoRecording"
                 + ": cameraId=" + cameraId
                 + ", frameWidth=" + frameWidth
                 + ", frameHeight=" + frameHeight
+                + ", timestamp=" + timestamp
         );
 
         final var cameraResources = camerasResources.get(cameraId);
@@ -1134,8 +1154,23 @@ import io.flutter.view.TextureRegistry;
         }
 
         try {
-            final var mediaRecorderSurface = mediaRecorder.getSurface();
-            cameraResources.camera().startCapture(mediaRecorderSurface);
+            Surface mediaSurface = mediaRecorder.getSurface();
+
+            if (timestamp) {
+                // create GL thread which will render into mediaSurface ---
+                final GLRenderThread newGl = new GLRenderThread(mediaSurface, frameWidth, frameHeight);
+                newGl.start();
+                // wait for init (small timeout)
+                newGl.waitForInit();
+
+                mediaSurface = newGl.getInputSurface();
+
+                // retain references to stop later
+                this.glThread = newGl;
+                this.glInputSurface = mediaSurface;
+            }
+
+            cameraResources.camera().startCapture(mediaSurface);
             mediaRecorder.start();
         } catch (final Exception e) {
             mediaRecorder.reset();
@@ -1159,7 +1194,19 @@ import io.flutter.view.TextureRegistry;
             throw new IllegalArgumentException("Camera resources not found: " + cameraId);
         }
 
+        // stop camera capture
         cameraResources.camera().stopCapture();
+
+        // release GL input surface and stop GL thread
+        if (glInputSurface != null) {
+            try { glInputSurface.release(); } catch (Exception ignored) {}
+            glInputSurface = null;
+        }
+        if (glThread != null) {
+            glThread.shutdown();
+            try { glThread.join(1000); } catch (InterruptedException ignored) {}
+            glThread = null;
+        }
 
         final var mediaRecorder = cameraResources.mediaRecorder();
         mediaRecorder.stop();

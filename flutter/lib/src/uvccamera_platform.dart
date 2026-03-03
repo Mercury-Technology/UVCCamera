@@ -188,8 +188,11 @@ class UvcCameraPlatform extends UvcCameraPlatformInterface {
   }
 
   @override
-  Future<XFile> takePicture(int cameraId) async {
-    final result = await _nativeMethodChannel.invokeMethod<String>('takePicture', {'cameraId': cameraId});
+  Future<XFile> takePicture(int cameraId, bool? timestamp) async {
+    final result = await _nativeMethodChannel.invokeMethod<String>('takePicture', {
+      'cameraId': cameraId,
+      'timestamp': timestamp ?? false,
+    });
 
     if (result == null) {
       throw PlatformException(code: 'UNKNOWN', message: 'Unable to take picture for camera: $cameraId');
@@ -199,10 +202,11 @@ class UvcCameraPlatform extends UvcCameraPlatformInterface {
   }
 
   @override
-  Future<XFile> startVideoRecording(int cameraId, UvcCameraMode videoRecordingMode) async {
+  Future<XFile> startVideoRecording(int cameraId, UvcCameraMode videoRecordingMode, bool? timestamp) async {
     final result = await _nativeMethodChannel.invokeMethod<String>('startVideoRecording', {
       'cameraId': cameraId,
       'videoRecordingMode': videoRecordingMode.toMap(),
+      'timestamp': timestamp ?? false,
     });
 
     if (result == null) {

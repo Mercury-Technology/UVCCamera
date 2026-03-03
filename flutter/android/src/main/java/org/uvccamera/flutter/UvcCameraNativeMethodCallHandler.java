@@ -412,9 +412,16 @@ import io.flutter.plugin.common.MethodChannel;
                     return;
                 }
 
+                final var timestamp = call.<Boolean>argument("timestamp");
+                if (timestamp == null) {
+                    result.error("InvalidArgument", "timestamp is required", null);
+                    return;
+                }
+
                 try {
                     uvcCameraPlatform.takePicture(
                             cameraId,
+                            timestamp,
                             (pictureFile, error) -> mainLooperHandler.post(() -> {
                                 if (error != null) {
                                     result.error(error.getClass().getSimpleName(), error.getMessage(), null);
@@ -440,6 +447,12 @@ import io.flutter.plugin.common.MethodChannel;
                     return;
                 }
 
+                final var timestamp = call.<Boolean>argument("timestamp");
+                if (timestamp == null) {
+                    result.error("InvalidArgument", "timestamp is required", null);
+                    return;
+                }
+
                 final var frameWidth = (Integer)videoRecordingMode.get("frameWidth");
                 if (frameWidth == null) {
                     result.error("InvalidArgument", "videoRecordingMode.frameWidth is required", null);
@@ -457,7 +470,8 @@ import io.flutter.plugin.common.MethodChannel;
                     videoRecordingFile = uvcCameraPlatform.startVideoRecording(
                             cameraId,
                             frameWidth,
-                            frameHeight
+                            frameHeight,
+                            timestamp
                     );
                 } catch (final Exception e) {
                     result.error(e.getClass().getSimpleName(), e.getMessage(), null);

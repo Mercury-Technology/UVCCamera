@@ -34,6 +34,8 @@ import java.nio.ByteBuffer;
      */
     private final UvcCameraTakePictureResultHandler resultHandler;
 
+    private boolean timestamp;
+
     /**
      * Whether the frame has been captured
      */
@@ -51,12 +53,14 @@ import java.nio.ByteBuffer;
             final UvcCameraPlatform uvcCameraPlatform,
             final int cameraId,
             final File outputFile,
-            final UvcCameraTakePictureResultHandler resultHandler
+            final UvcCameraTakePictureResultHandler resultHandler,
+            final boolean timestamp
     ) {
         this.uvcCameraPlatform = uvcCameraPlatform;
         this.cameraId = cameraId;
         this.outputFile = outputFile;
         this.resultHandler = resultHandler;
+        this.timestamp = timestamp;
     }
 
     @Override
@@ -72,7 +76,7 @@ import java.nio.ByteBuffer;
 
         frameCaptured = true;
 
-        uvcCameraPlatform.handleTakenPicture(cameraId, outputFile, frame, resultHandler);
+        uvcCameraPlatform.handleTakenPicture(cameraId, outputFile, frame, resultHandler, timestamp);
     }
 
 }
