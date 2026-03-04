@@ -2,7 +2,7 @@
 
 A USB Video Class (UVC) camera library for Android and a plugin for Flutter.
 
-This project is a fork of the original [Alexey Pelykh](https://alexey-pelykh.com).
+This project is a fork of the original [alexey-pelykh/UVCCamera](https://github.com/alexey-pelykh/UVCCamera).
 
 ## Extensions
 
